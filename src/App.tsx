@@ -17,10 +17,11 @@ function App() {
   const [allData, setAllData] = useState<Data[]>([]);
   const [page, setPage] = useState(1);
   const totalPages = 10875;
-  const [selectedRow, setSelectedRow] = useState<Data[] | null>([]);
-  const [selectedRowId, setSelectedRowId] = useState<number[]>([]);
+  const [selectedRowId, setSelectedRowId] = useState<number[]>(() => {
+    return JSON.parse(localStorage.getItem("selectionID") || "[]");
+  });
+  const selectedRow = allData.filter((row) => selectedRowId.includes(row.id));
 
-  
   useEffect(() => {
     const getData = async () => {
       try {
@@ -33,24 +34,13 @@ function App() {
         console.error("Error is:", error);
       }
     };
-    
+
     getData();
   }, [page]);
-  
-  useEffect(() => {
-    const getData = localStorage.getItem('selectionID') || '[]';
-    if (getData) {
-      const ID = JSON.parse(getData);
-      setSelectedRowId(ID);
-    }
-  }, [])
 
   useEffect(() => {
-  if (selectedRowId.length > 0 && allData.length > 0) {
-    const restoredData = allData.filter((data) => selectedRowId.includes(data.id));
-    setSelectedRow(restoredData);
-  }
-}, [allData]); // Run when data is fetched
+    localStorage.setItem("selectionID", JSON.stringify(selectedRowId));
+  }, [selectedRowId]);
 
   return (
     <>
@@ -59,18 +49,22 @@ function App() {
         dataKey="id"
         selection={selectedRow}
         onSelectionChange={(e) => {
-          setSelectedRow(e.value as Data[]);
-          const getRowId = e.value.map((row) => {
-            setSelectedRowId(row.id);
-          })
-          localStorage.setItem('selectionID', JSON.stringify(getRowId));
+          const pageSelectedIds = e.value.map((r: Data) => r.id);
+
+          setSelectedRowId((prev) => {
+            const filteredPrev = prev.filter(
+              (id) => !allData.some((row) => row.id === id)
+            );
+            return [...filteredPrev, ...pageSelectedIds];
+          });
         }}
+        selectionMode="multiple"
         paginator
         rows={12}
         lazy
         totalRecords={totalPages}
         first={(page - 1) * 12}
-        onPage={(e) => setPage(e.page + 1)} 
+        onPage={(e) => setPage((e.page ?? 0) + 1)}
       >
         <Column selectionMode="multiple" headerStyle={{ width: "3rem" }} />
 
