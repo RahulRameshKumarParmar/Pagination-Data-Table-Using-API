@@ -16,8 +16,11 @@ import { useEffect, useState } from "react";
 function App() {
   const [allData, setAllData] = useState<Data[]>([]);
   const [page, setPage] = useState(1);
+  const totalPages = 10875;
   const [selectedRow, setSelectedRow] = useState<Data[] | null>([]);
+  const [selectedRowId, setSelectedRowId] = useState<number[]>([]);
 
+  
   useEffect(() => {
     const getData = async () => {
       try {
@@ -30,9 +33,24 @@ function App() {
         console.error("Error is:", error);
       }
     };
-
+    
     getData();
   }, [page]);
+  
+  useEffect(() => {
+    const getData = localStorage.getItem('selectionID') || '[]';
+    if (getData) {
+      const ID = JSON.parse(getData);
+      setSelectedRowId(ID);
+    }
+  }, [])
+
+  useEffect(() => {
+  if (selectedRowId.length > 0 && allData.length > 0) {
+    const restoredData = allData.filter((data) => selectedRowId.includes(data.id));
+    setSelectedRow(restoredData);
+  }
+}, [allData]); // Run when data is fetched
 
   return (
     <>
@@ -40,7 +58,19 @@ function App() {
         value={allData}
         dataKey="id"
         selection={selectedRow}
-        onSelectionChange={(e) => setSelectedRow(e.value)}
+        onSelectionChange={(e) => {
+          setSelectedRow(e.value as Data[]);
+          const getRowId = e.value.map((row) => {
+            setSelectedRowId(row.id);
+          })
+          localStorage.setItem('selectionID', JSON.stringify(getRowId));
+        }}
+        paginator
+        rows={12}
+        lazy
+        totalRecords={totalPages}
+        first={(page - 1) * 12}
+        onPage={(e) => setPage(e.page + 1)} 
       >
         <Column selectionMode="multiple" headerStyle={{ width: "3rem" }} />
 
